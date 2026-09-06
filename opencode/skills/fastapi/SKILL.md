@@ -3,8 +3,10 @@ name: fastapi
 description: >
   Production-grade FastAPI and Pydantic guidance focused on ASGI lifecycle,
   dependency scopes, async correctness, validated API contracts, security,
-  streaming, testing, and deployment. Use when working with FastAPI, Starlette,
-  Pydantic request/response models, APIRouter, Depends, Uvicorn, or ASGI APIs.
+  streaming, testing, and deployment. Use when working on FastAPI applications,
+  APIRouter, Depends, or their Pydantic, Starlette, and Uvicorn integrations.
+  Standalone Pydantic, Starlette, Uvicorn, or other ASGI work does not by itself
+  require this skill.
 license: MIT
 metadata:
   author: opencode
@@ -13,9 +15,9 @@ metadata:
 
 # FastAPI
 
-Load the `python` skill first for Python semantics, typing, exceptions, task ownership, packaging, security, testing, and performance. This skill adds FastAPI, Starlette, Pydantic, ASGI, and deployment-specific guidance. Use uv, Ruff, and ty as specified by the Python skill.
+Load the `python` skill first for Python semantics, typing, exceptions, task ownership, packaging, security, testing, and performance. This skill adds guidance for FastAPI and its Starlette, Pydantic, ASGI, and deployment integrations. Follow the Python skill's tooling policy: prefer uv, Ruff, and ty for new projects, preserve existing tooling during scoped maintenance, and migrate only when requested.
 
-FastAPI remains pre-1.0. For new services, use the latest stable mutually compatible FastAPI, Starlette, Pydantic, AnyIO, HTTPX, Uvicorn, Python, ORM, and security-library releases. For existing services, resolve the exact stack from `pyproject.toml`, `uv.lock`, installed metadata, and CI, then preserve it unless an upgrade is requested or required. Pin and test the complete resolved stack; do not assume current online docs match the repository or independently upgrade FastAPI's constrained transitive internals without evidence.
+FastAPI remains pre-1.0. For new services, use the latest stable mutually compatible FastAPI, Starlette, Pydantic, AnyIO, HTTPX, Uvicorn, Python, ORM, and security-library releases. For existing services, resolve the exact stack from `pyproject.toml`, repository lockfiles, installed metadata, and CI, then preserve it unless an upgrade is requested or required. Pin and test the complete resolved stack; do not assume current online docs match the repository or independently upgrade FastAPI's constrained transitive internals without evidence.
 
 ## Workflow
 
@@ -55,9 +57,12 @@ FastAPI remains pre-1.0. For new services, use the latest stable mutually compat
 - Dependencies are cached once per request by default. Use `use_cache=False` only when every injection genuinely requires a fresh value.
 - A dependency with one `yield` is a context manager. Use `try/finally`, preserve teardown ordering, and re-raise caught exceptions or raise a deliberate replacement; never swallow failures around `yield`.
 - `yield` dependencies default to `scope="request"` and clean up after the
-  response finishes. Use `scope="function"` to clean up after the endpoint
-  returns but before serialization and sending. Keep request scope when
-  streaming or serialization still needs the resource.
+  response finishes. With `scope="function"`, ordinary response validation and
+  serialization occur before dependency teardown; sending follows teardown.
+  Cleanup mutations therefore do not change an already serialized response.
+  Streaming can produce body data during sending, so keep resources needed by the
+  stream in request scope or explicitly owned by the stream. Verify this order
+  against the pinned FastAPI version when changing resource lifetimes.
 - Multiple Starlette background tasks run in order, and one failure prevents
   later tasks from running.
 - Override dependencies in tests narrowly and restore overrides after each test.
@@ -85,6 +90,11 @@ FastAPI remains pre-1.0. For new services, use the latest stable mutually compat
 - For Pydantic v2 use `model_validate`, `model_validate_json`, `model_dump`, `model_dump_json`, `model_copy`, `model_json_schema`, `TypeAdapter`, `field_validator`, and `model_validator`. Preserve v1 APIs only in an explicitly version-constrained legacy project.
 - Prefer built-in constraints and deterministic after-validators. Keep validators free of network, database, and mutable global side effects. A `TypeError` in a v2 validator is not automatically a validation error.
 - Use `model_construct()` only for already trusted validated data and after profiling demonstrates value.
+- `model_copy(update=...)` does not validate update values. Use it only with
+  trusted data; validate the merged state when cross-field invariants require it.
+  For partial updates, distinguish omitted fields from explicit nulls with
+  `model_fields_set` or `model_dump(exclude_unset=True)`. Do not use
+  `exclude_none=True` to discard a caller's intentional null assignment.
 - Treat subclass/polymorphic serialization as a security decision; verify which fields can appear and do not enable serialize-as-any behavior globally around sensitive models.
 - Match Pydantic validation failures by stable error type, not English message text or exact incidental schema layout.
 
@@ -195,7 +205,7 @@ FastAPI remains pre-1.0. For new services, use the latest stable mutually compat
 - Set transport exception behavior appropriately when testing the actual 500 response rather than expecting the application exception to escape.
 - Use disposable real databases for SQL, pool, transaction, migration, and isolation behavior; mocks do not validate those contracts.
 - Snapshot or semantically diff OpenAPI and preserve regression tests for production failures.
-- Run Ruff and ty through uv before finishing. Match the same pinned tool versions locally and in CI.
+- Run the repository's configured formatting, linting, and type checks. For an Astral toolchain, run Ruff and ty through uv. Match the same pinned tool versions locally and in CI.
 
 ## Deployment And Observability
 
@@ -228,6 +238,8 @@ FastAPI remains pre-1.0. For new services, use the latest stable mutually compat
 
 - FastAPI release notes: `https://fastapi.tiangolo.com/release-notes/`
 - FastAPI advanced guide: `https://fastapi.tiangolo.com/advanced/`
+- Dependency teardown and response serialization in FastAPI 0.140.13:
+  `https://github.com/fastapi/fastapi/blob/0.140.13/fastapi/routing.py`
 - Starlette documentation: `https://starlette.dev/`
 - Pydantic documentation: `https://docs.pydantic.dev/latest/`
 - AnyIO documentation: `https://anyio.readthedocs.io/`

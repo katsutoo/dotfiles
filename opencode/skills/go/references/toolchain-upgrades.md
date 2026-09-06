@@ -1,7 +1,8 @@
 # Go toolchain upgrades
 
 Read this reference when changing the Go toolchain, `go` or `toolchain`
-directives, or code whose behavior changed across Go releases.
+directives, cryptographic code or tests, or code whose behavior changed across
+Go releases.
 
 ## Version policy
 
@@ -35,6 +36,15 @@ directives, or code whose behavior changed across Go releases.
   applying modernizations, and keep optional cleanup out of unrelated work.
 - Re-run representative allocation, GC, latency, memory, cgo, and profile checks
   when the toolchain can affect a measured hot path.
+
+## HTTP, TLS, and cryptographic compatibility
+
+- Use Argon2id only for human-chosen passwords. Generate opaque bearer tokens with `crypto/rand` or use a vetted token format, and avoid logging secrets or raw tokens.
+- Do not introduce RSA PKCS #1 v1.5 encryption. Use OAEP for RSA encryption, and retain v1.5 decryption only for reviewed legacy protocol compatibility.
+
+- Regression-test TLS interoperability after toolchain upgrades. Prefer fixing incompatible peers over retaining temporary compatibility settings.
+- Regression-test `ServeMux` redirects, request methods and bodies, virtual hosts, cookies, proxies, and URL rejection after a toolchain upgrade when those behaviors are public contracts.
+- Read the selected toolchain's release notes before changing cryptographic code or tests. Do not assume caller-supplied randomness hooks or deterministic-test techniques behave the same across Go releases.
 
 ## Testing additions
 

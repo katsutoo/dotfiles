@@ -33,32 +33,9 @@ Resolve the mandatory minimum and language semantics from the `go` directive. Wh
 - Prefer simple package layouts over layered ceremony.
 - Do not add abstractions, frameworks, or concurrency machinery before they are needed.
 
-## Opinionated starter options
-
-Use these only for a new backend application when its requirements fit. Third-party entries are reasonable choices, not language-wide defaults.
-
-| Area | Option | Notes |
-| --- | --- | --- |
-| Toolchain | Mandatory minimum `go` directive; optional preferred `toolchain` directive | Account for `GOTOOLCHAIN` and automatic switching; do not rewrite directives incidentally |
-| Formatting | `gofmt`; optionally `goimports` | `goimports` also applies Go formatting while organizing imports |
-| HTTP | `net/http`; Chi when its routing features help | Keep handlers and middleware compatible with standard `http.Handler` |
-| PostgreSQL | `pgx`; add `pgxpool` or `sqlc` when useful | Match connection and query tooling to the service's needs |
-| Migrations | Existing deployment-owned system; Goose SQL is one option | Keep migrations versioned, ordered, reviewed, and deployment-owned |
-| JSON | `encoding/json` | Use explicit request/response DTOs and stable tags |
-| Logging | `log/slog` | Use structured service logs unless the repository has an established API |
-| Validation | Explicit validation; optionally `go-playground/validator` | Add declarative validation when contract complexity justifies it |
-| Password hashing | Argon2id | If the service stores passwords |
-| IDs | Domain-specific; UUIDv7 when time ordering and locality help | IDs are identifiers, not authorization secrets |
-| Date/time | `time` (stdlib) | Keep time zones explicit and consistent |
-| Integration tests | Real isolated dependencies; optionally `testcontainers-go` | Use containers when realism justifies requiring a container runtime |
-| Static analysis | `go vet`; optionally `staticcheck` | Run repository-configured analyzers |
-| Vulnerability review | `govulncheck` | Run regularly and after dependency or toolchain changes |
-
-If the repository already uses Echo, Gin, Fiber, GORM, Bun, or another established stack, stay consistent unless the user explicitly asks for a migration.
-
-When Chi, pgx, sqlc, Goose, or `log/slog` is in scope, read
-`references/backend-stack.md` before changing routing, generated database code,
-migrations, logging, startup, or shutdown.
+For new backend stack selection or changes to HTTP, persistence, migrations,
+logging, startup, or shutdown, read
+[references/backend-stack.md](references/backend-stack.md).
 
 ## Architecture defaults
 
@@ -119,27 +96,11 @@ Keep tests beside the code as `*_test.go` by default.
 - Avoid unbounded goroutine creation; use worker pools or backpressure for fan-out.
 - Run `go test -race ./...` for non-trivial concurrent code.
 
-## HTTP, database, and security
+## Security boundaries
 
-- In application HTTP code, use `http.Status...` constants rather than numeric literals. Protocol tables and parser fixtures may use numbers when that is clearer.
-- Configure `http.Server.ReadHeaderTimeout` and `IdleTimeout`, then choose `ReadTimeout` and `WriteTimeout` only after accounting for request bodies and streaming behavior.
-- Reuse `http.Client` and its `Transport`; choose an end-to-end client timeout, per-request context deadlines, or both according to the operation.
-- Regression-test TLS interoperability after toolchain upgrades. Prefer fixing incompatible peers over retaining temporary compatibility settings.
-- After a successful `Client.Do`, close `resp.Body` on every path. Consume it as required by the protocol and connection-reuse policy, and bound reads from untrusted peers.
-- Shut servers down with `http.Server.Shutdown` and a bounded context, treat `http.ErrServerClosed` as expected, stop accepting work, and wait for owned work that must complete.
-- Bound request bodies before decoding with `http.MaxBytesReader` or `http.MaxBytesHandler`, using endpoint-specific limits for JSON and uploads.
-- Configure `httputil.ReverseProxy` with `Rewrite`, not the deprecated and insecure `Director`; explicitly decide whether and how to add trusted forwarding headers.
-- Preserve standard-library limits on cookies and query parameters, handle parser failures explicitly, and do not relax compatibility controls for those limits or strict URL host parsing without a reviewed requirement.
-- Regression-test `ServeMux` redirects, request methods and bodies, virtual hosts, cookies, proxies, and URL rejection after a toolchain upgrade when those behaviors are public contracts.
-- Keep response and error envelopes consistent within an API surface.
-- The code coordinating an atomic use case owns the transaction boundary.
-- Keep SQL in queries or repository code, not in handlers.
-- Treat `sqlc` output as generated code: regenerate it, do not hand-edit it.
-- Before schema or performance-sensitive query changes, load the matching database skill. Account for table size, lock behavior, deployment order, and overlapping application versions; prefer expand-and-contract changes and separate bounded backfills from deploy-time migrations.
-- Use Argon2id only for human-chosen passwords. Generate opaque bearer tokens with `crypto/rand` or use a vetted token format, and avoid logging secrets or raw tokens.
-- Read the selected toolchain's release notes before changing cryptographic code or tests. Do not assume caller-supplied randomness hooks or deterministic-test techniques behave the same across Go releases.
-- Do not introduce RSA PKCS #1 v1.5 encryption. Use OAEP for RSA encryption, and retain v1.5 decryption only for reviewed legacy protocol compatibility.
 - Load the `security` skill when a change creates or alters an authentication, authorization, cryptography, upload, command, parser, outbound-URL, filesystem-path, or other trust boundary. Treat outbound URLs as SSRF boundaries and filesystem paths as traversal boundaries; bound request, response, decompression, and collection sizes.
+- For cryptographic code or tests, read the cryptographic compatibility guidance
+  in [references/toolchain-upgrades.md](references/toolchain-upgrades.md#http-tls-and-cryptographic-compatibility).
 
 ## JSON and API contracts
 

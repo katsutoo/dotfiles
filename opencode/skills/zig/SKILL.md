@@ -212,25 +212,9 @@ Preserve the principle, not an uncompiled code sample.
 
 ## Comptime Discipline
 
-- Use `comptime` to require compile-time values, generate types or tables, select
-  platform implementations, and make unsupported states fail compilation.
-- Prefer ordinary functions and data when they work at both compile time and
-  runtime. Do not use comptime as a blanket optimization or abstraction system.
-- Keep reflection focused and readable. Exhaustive tagged-union transformations
-  and generated bindings can justify it; replacing straightforward code usually
-  does not.
-- Derive type-creation and reflection builtins from the selected compiler; these
-  APIs have changed across Zig releases.
-- Use `inline` only when semantics require inline iteration or measurement proves
-  the trade. Do not raise the evaluation branch quota before examining the
-  algorithm and generated work.
-- Audit compile time with the pinned compiler's supported timing facilities and
-  inspect build-runner work, linking, generated code, binary size, and cache
-  behavior separately. Do not assume `comptime` or `inline` is free.
-- Zig analyzes declarations lazily. CI should instantiate affected generic APIs,
-  reference optional branches, and force representative field-dependent use for
-  the affected supported targets and feature combinations. Declaration-reference
-  helpers do not replace behavior tests or representative instantiation.
+Prefer ordinary functions and data where they suffice. When changing comptime,
+reflection, generic instantiation, or compile-time performance, read
+[references/comptime.md](references/comptime.md).
 
 ## Concurrency And I/O
 
@@ -251,50 +235,15 @@ Preserve the principle, not an uncompiled code sample.
 
 ## Build, Packages, And Toolchain
 
-- Treat `build.zig` as code that declares a dependency graph. Use explicit step
-  dependencies and lazy paths; do not perform build actions eagerly while
-  constructing the graph.
-- Use `standardTargetOptions` and `standardOptimizeOption` when creating a new
-  conventional project, unless the artifact intentionally constrains them.
-- Do not hardcode `zig-out` or cache paths, mutate source files during a normal
-  build, or bypass the graph for generated files.
-- `addTest` creates a test compilation artifact; it does not execute tests. For
-  host-runnable targets, connect `addRunArtifact` to the test step. For foreign
-  targets, run through a configured emulator or system integration when
-  execution is required; otherwise label the check as compile-only and never
-  report that the tests ran.
-- Derive package identity, hashes, fingerprints, local overrides, cache paths,
-  and manifest fields from the selected Zig release. Declare an accurate minimum
-  Zig version, include all build inputs and licenses in package paths, and inspect
-  every manifest or identity change after package commands.
-- Treat generated bindings and source as generated: modify the source header,
-  schema, or generator input, then regenerate with the pinned toolchain.
-- Keep tests, fuzzers, benchmarks, validation, and release artifacts discoverable
-  as named `zig build` steps when the repository build graph owns them.
+Keep generated files and build actions in the repository's dependency graph.
+For build, package, generated-code, or test-step changes, read
+[references/build-packages.md](references/build-packages.md).
 
 ## C And Foreign Interoperability
 
-- Match the foreign ABI exactly: calling convention, symbol, integer width and
-  signedness, layout, alignment, nullability, sentinel, ownership, and callback
-  lifetime.
-- Prefer C ABI types and narrow checked wrappers around raw declarations. Convert
-  pointer-plus-length inputs to slices only after validating the pair.
-- Keep C pointers such as `[*c]T` at translated or ABI boundaries rather than in
-  ordinary handwritten Zig APIs.
-- Specify who allocates and frees every foreign object. Keep allocation and
-  deallocation on the same side unless the foreign API provides a matching
-  release function.
-- Keep callback state alive until the foreign library cannot call it again. Catch
-  and translate recoverable Zig errors before returning through a C ABI. Do not
-  rely on recovering from a Zig panic: the default panic path aborts or traps
-  rather than unwinding. Catch foreign exceptions on the foreign side so they do
-  not unwind through Zig frames.
-- C translation is version-sensitive. Zig 0.16 still provides `@cImport` but
-  deprecates it while moving translation into the build system. Prefer
-  `b.addTranslateC` and import its module for new 0.16 code. Check the selected
-  release rather than inferring a stable API from master.
-- Verify bindings on every supported target ABI. Cross-compilation is a Zig
-  strength, not evidence that an untested target-specific ABI is correct.
+Make ABI, ownership, release, and callback lifetime contracts explicit. For
+foreign bindings, exported symbols, callbacks, or C translation, read
+[references/ffi.md](references/ffi.md).
 
 ## Security Boundaries
 
@@ -316,22 +265,9 @@ Preserve the principle, not an uncompiled code sample.
 
 ## Performance And Benchmarking
 
-- Think from data layout, access patterns, allocation, copying, branch behavior,
-  and the slowest relevant resource. Estimate network, disk, memory, and CPU
-  before optimizing.
-- Batch fixed-cost I/O, allocation, synchronization, and foreign calls. Keep hot
-  loops simple and separate control-plane branching when measurement supports it.
-- Load the `benchmark` skill for performance claims. Benchmark a correct production-like
-  artifact in the intended optimization and safety mode, and report compiler
-  version, target CPU, allocator, linking, LTO, and relevant build options.
-- Do not benchmark Debug unless Debug performance is the question. Compare
-  ReleaseSafe and ReleaseFast only when their different safety policies are
-  acceptable and explicitly reported.
-- Measure allocations, peak memory, binary size, startup, and tail behavior in
-  addition to throughput when those resources matter.
-- Do not assume zero-copy, packed layout, custom allocation, comptime generation,
-  or unchecked access is faster. Include lifecycle and maintenance cost, then
-  prove the effect with representative measurements.
+Measure before adding complexity for speed. For profiling, optimization, or
+performance claims, read
+[references/performance.md](references/performance.md) and use the `benchmark` skill.
 
 ## Testing, QA, And Verification
 
@@ -349,6 +285,9 @@ Preserve the principle, not an uncompiled code sample.
   initialization or deinitialization as permitted by the API.
 - Test zero, one, maximum, maximum plus one, integer conversion, alignment,
   endianness, malformed input, error identity, and unsupported target behavior.
+- Zig analyzes declarations lazily. Instantiate affected generic APIs and
+  representative optional branches for supported targets; declaration-reference
+  helpers alone do not establish behavior.
 - Use randomized model tests, fuzzing, or deterministic simulation when they
   exercise meaningful invariants. Derive callback and command syntax from the
   selected toolchain. Preserve each reported crash input and replay it
@@ -358,7 +297,9 @@ Preserve the principle, not an uncompiled code sample.
   ownership failure.
 - When tests run through `zig build`, keep stdout free for the build-runner and
   test-runner protocol; use `std.testing` diagnostics or stderr for test output.
-  Successful test compilation is not evidence that tests executed.
+  `addTest` only compiles; execution needs a run step such as `addRunArtifact`.
+  Label foreign-target checks as compile-only unless an emulator or target system
+  actually ran them. Successful compilation is not evidence that tests executed.
 - Load the `qa` skill when the change needs validation of the shipped executable
   or library integration as a real
   consumer. Unit tests and successful compilation do not verify packaging,
@@ -378,38 +319,11 @@ Use `zig test path/to/root.zig` when the project intentionally tests a source
 root directly. Inspect `zig build --help` for project-defined steps and options.
 Also test the affected optimized safety mode, release artifact, and target matrix.
 
-## Review Checklist
-
-- Is the exact Zig version known, and do syntax, stdlib, build, and package APIs
-  match it?
-- Does every allocation, view, handle, thread, callback, and foreign object have
-  an explicit owner and bounded lifetime?
-- Can mutation invalidate retained slices or pointers, or can copying duplicate
-  owner-like state?
-- Are expected errors handled as data and internal invariants asserted without
-  relying on disabled safety checks?
-- Are integer, length, offset, alignment, layout, and raw-byte assumptions proved?
-- Is comptime use smaller and clearer than the runtime or generated alternative,
-  and are all lazy branches compiled in CI?
-- Are untrusted inputs, allocation growth, queues, retries, recursion, and work
-  bounded?
-- Do Debug, ReleaseSafe or the shipped safety mode, tests, release artifacts,
-  affected targets, and relevant memory tools pass?
-
 ## Guardrails
 
 - Do not translate C, C++, Rust, or Go ownership patterns mechanically into Zig.
-- Do not hide allocation, ownership transfer, invalidation, or essential policy
-  behind convenience APIs.
-- Do not use `unreachable`, unchecked casts, or disabled safety to make the
-  compiler accept an unproved assumption.
-- Do not make correctness depend on Debug-only behavior.
-- Do not overuse comptime, reflection, generics, or inline code.
-- Do not retain pointers or slices across potentially relocating mutations.
-- Do not hand-edit generated code or hardcode build output paths.
 - Do not present TigerBeetle's project-specific limits or Ghostty's allocation
   choices as universal Zig requirements.
-- Do not rely on stale syntax, flags, or stdlib APIs without the pinned compiler.
 
 ## Primary References
 

@@ -40,8 +40,11 @@ A test that cannot fail, or fails for unrelated reasons, is worse than no test.
 - Inject time, randomness, and IDs; never depend on wall clock or seed luck.
 - No shared mutable state between tests; each test sets up and tears down its
   own data so order and parallelism never matter.
-- A test that fails once in fifty runs is broken. Fix it or delete it; do not
-  retry it into passing.
+- Preserve the first intermittent failure, including inputs, seed, execution
+  order, logs, and environment needed to investigate it. Diagnose whether the
+  cause is a product race, test nondeterminism, or infrastructure before changing
+  the test. Fix the cause; remove a test only when evidence shows it is invalid
+  or redundant and meaningful regression coverage remains. Do not retry into green.
 
 ## Assertions
 

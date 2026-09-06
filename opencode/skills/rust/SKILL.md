@@ -169,8 +169,30 @@ migrations/
 - Add integration tests with real dependencies when external systems affect behavior.
 - Use property tests, fuzzing, or benchmarks when invariants or performance justify them.
 - Load the `benchmark` skill for performance claims. Benchmark the shipped crate or binary in the intended release profile and report target, features, and LTO settings.
-- Format touched Rust files with the repository's configured `cargo fmt` invocation, then run `cargo fmt --all -- --check`, repository/CI-equivalent Clippy, tests, and doctests. Derive the matrix from CI: verify default features, no-default-features where supported, documented combinations, affected targets, and the declared MSRV. A current-stable build does not prove MSRV support. Use `--all-features` only when all features are designed to coexist. Follow the selected Cargo version's documented warning controls and the repository's existing warning policy rather than copying flags from another toolchain.
-- For shipped binaries or native libraries, build and smoke-test the actual release profile and deployment target with `--locked` when the project commits a lockfile. Review panic strategy, overflow checks, debug information, LTO, target features, stripping, symbol mangling, and debugger/profiler/crash-symbolization compatibility rather than assuming development-profile behavior carries over. Inspect linker diagnostics before suppressing them.
+- For ordinary implementation changes, format touched files with the repository's
+  configured `cargo fmt` invocation and run affected tests and CI-equivalent
+  Clippy checks. Run doctests when examples or documented behavior change.
+  Expand to workspace checks when shared code or the repository's required
+  checks call for them; a local implementation change does not by itself require
+  every release target or profile.
+- For public API, feature, dependency, or compiler-compatibility changes, derive
+  the affected matrix from CI: default features, no-default-features where
+  supported, documented combinations, targets, doctests, and declared MSRV.
+  A current-stable build does not prove MSRV support. Use `--all-features` only
+  when all features are designed to coexist.
+- For unsafe, FFI, or layout changes, exercise the affected safety contracts and
+  target ABIs. Use applicable Miri or sanitizer checks and optimized builds when
+  optimization can expose a violated assumption. Label foreign-target checks
+  that only compile; do not report them as executed tests.
+- For releases and changes affecting packaging, startup, shutdown, native linking,
+  or profile-dependent behavior, build and smoke-test the actual release profile
+  and deployment target with `--locked` when the project commits a lockfile.
+  Review affected panic strategy, overflow checks, debug information, LTO, target
+  features, stripping, symbol mangling, and debugger/profiler/crash-symbolization
+  compatibility. Inspect linker diagnostics before suppressing them.
+- Follow the selected Cargo version's documented warning controls and the
+  repository's existing warning policy rather than copying flags from another
+  toolchain.
 - Load the `qa` skill when the change needs validation of the shipped binary or library integration as a real consumer; unit tests and compilation do not verify packaging, startup, or supported-platform behavior.
 - Run `cargo deny check` or `cargo audit` when dependency or security-sensitive work is involved.
 

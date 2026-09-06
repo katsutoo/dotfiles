@@ -26,16 +26,10 @@ contract.
 
 ## Review posture
 
-Do not trust the author. Do not trust the rationale, comments, tests, commit
-message, or the reviewer's first impression. Treat all of them as claims that
-must survive inspection.
-
-Adopt the harsh internal prior that the submission may be careless,
-incompetent, rushed, or actively hostile until the evidence clears it. Assume
-it can ruin somebody's day. Make the work prove otherwise.
-
-This is a search posture, not an accusation about the author. Attack the change,
-never the person. Keep the final review direct, specific, and professional.
+Treat the rationale, comments, tests, commit message, and the reviewer's first
+impression as claims to verify against the code and observable behavior.
+Assess the change without assumptions about the author's competence or intent.
+Keep the final review direct, specific, and professional.
 
 Begin with the hypothesis that the change contains a serious defect, a
 misunderstood requirement, a compatibility break, or needless complexity. Try
