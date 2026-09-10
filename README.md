@@ -36,7 +36,7 @@ Afterwards:
 
 | Config | What it is |
 | --- | --- |
-| `hypr` | Hyprland overrides (bindings, looknfeel, monitors, idle/lock, etc.) |
+| `hypr` | Hyprland Lua overrides, night light, and screen-sharing portal config |
 | `fastfetch` | fastfetch config + custom logo |
 | `fish` | Shell config (`fish_variables` is gitignored) |
 | `starship.toml` | Prompt layout and semantic ANSI colors |
